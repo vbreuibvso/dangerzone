@@ -12,7 +12,10 @@ from ..util import get_resource_path, get_subprocess_startupinfo
 from .base import IsolationProvider, terminate_process_group
 
 TIMEOUT_KILL = 5  # Timeout in seconds until the kill command returns.
-
+MINIMUM_DOCKER_VERSION = {
+    "Darwin": "4.35.1",
+    "Windows": "4.35.1",
+}
 
 # Define startupinfo for subprocesses
 if platform.system() == "Windows":
@@ -198,9 +201,30 @@ class Container(IsolationProvider):
         return True
 
     @staticmethod
+    def check_runtime_version() -> Tuple[bool, str]:
+        # On windows and darwin, check that the minimum version is met
+        if platform.system() != "Linux":
+            with subprocess.Popen(
+                ["docker", "version", "--format", "'{{.Server.Platform.Name}}'"], 
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                startupinfo=get_subprocess_startupinfo(),
+            ) as p:
+                stdout, stderr = p.communicate()
+                if p.returncode != 0:
+                    raise NotAvailableContainerTechException("docker", stderr.decode())
+                # The output is like "Docker Desktop 4.35.1 (173168)"
+                version = stdout.replace("Docker Desktop", "").split()[0]
+
+                if version < MINIMUM_DOCKER_VERSION[platform.system()]:
+                    return False, version
+        return True, ""
+
+    @staticmethod
     def is_runtime_available() -> bool:
         container_runtime = Container.get_runtime()
         runtime_name = Container.get_runtime_name()
+
         # Can we run `docker/podman image ls` without an error
         with subprocess.Popen(
             [container_runtime, "image", "ls"],
