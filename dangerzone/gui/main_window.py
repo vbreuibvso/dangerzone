@@ -500,8 +500,8 @@ class WaitingWidgetContainer(WaitingWidget):
         error: Optional[str] = None
 
         try:
-            is_available, version = self.dangerzone.isolation_provider.check_runtime_version()
-            if not is_available:
+            is_greater, version = self.dangerzone.isolation_provider.check_docker_desktop_version()
+            if not is_greater:
                 error = f"Your Docker version is too old ({version})."
                 print(error)
             self.dangerzone.isolation_provider.is_runtime_available()
