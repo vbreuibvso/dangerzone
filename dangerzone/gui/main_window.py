@@ -236,6 +236,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setProperty("OSColorMode", self.dangerzone.app.os_color_mode.value)
 
         self.show()
+        print("Checking Docker Desktop version")
+        is_version_valid, version = (
+            self.dangerzone.isolation_provider.check_docker_desktop_version()
+        )
+        if not is_version_valid:
+            self.handle_docker_desktop_version_check(is_version_valid, version)
 
     def show_update_success(self) -> None:
         """Inform the user about a new Dangerzone release."""
@@ -287,6 +293,44 @@ class MainWindow(QtWidgets.QMainWindow):
         check = self.toggle_updates_action.isChecked()
         self.dangerzone.settings.set("updater_check", check)
         self.dangerzone.settings.save()
+
+    def handle_docker_desktop_version_check(
+        self, is_version_valid: bool, version: str
+    ) -> None:
+        hamburger_menu = self.hamburger_button.menu()
+        sep = hamburger_menu.insertSeparator(hamburger_menu.actions()[0])
+        error_action = QAction("Docker Desktop should be upgraded", hamburger_menu)
+        error_action.setIcon(
+            QtGui.QIcon(
+                load_svg_image(
+                    "hamburger_menu_update_dot_error.svg", width=64, height=64
+                )
+            )
+        )
+
+        def _show_alert() -> None:
+            message = """
+            <p>Your Docker Desktop version is too old. Please upgrade to a more recent version.</p>
+            <p>Visit the <a href="https://www.docker.com/products/docker-desktop">Docker Desktop website</a> to download the latest version.</p>
+            <em>Updating Docker Desktop allows you to have more confidence that you can process your documents safely.</em>
+            """
+            widget = Alert(
+                self.dangerzone,
+                title="Your Docker Desktop version should be upgraded",
+                message=message,
+                ok_text="Ok",
+                has_cancel=False,
+            )
+            widget.launch()
+
+        error_action.triggered.connect(_show_alert)
+        hamburger_menu.insertAction(sep, error_action)
+
+        self.hamburger_button.setIcon(
+            QtGui.QIcon(
+                load_svg_image("hamburger_menu_update_error.svg", width=64, height=64)
+            )
+        )
 
     def handle_updates(self, report: UpdateReport) -> None:
         """Handle update reports from the update checker thread.
@@ -500,10 +544,6 @@ class WaitingWidgetContainer(WaitingWidget):
         error: Optional[str] = None
 
         try:
-            is_greater, version = self.dangerzone.isolation_provider.check_docker_desktop_version()
-            if not is_greater:
-                error = f"Your Docker version is too old ({version})."
-                print(error)
             self.dangerzone.isolation_provider.is_runtime_available()
         except NoContainerTechException as e:
             log.error(str(e))

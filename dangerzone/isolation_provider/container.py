@@ -205,7 +205,7 @@ class Container(IsolationProvider):
         # On windows and darwin, check that the minimum version is met
         if platform.system() != "Linux":
             with subprocess.Popen(
-                ["docker", "version", "--format", "{{.Server.Platform.Name}}"], 
+                ["docker", "version", "--format", "{{.Server.Platform.Name}}"],
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 startupinfo=get_subprocess_startupinfo(),
