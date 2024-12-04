@@ -7,7 +7,6 @@ from typing import List
 
 from pytest import MonkeyPatch, fixture
 from pytest_mock import MockerFixture
-from pytest_subprocess import FakeProcess
 from pytestqt.qtbot import QtBot
 
 from dangerzone.document import Document
@@ -590,3 +589,48 @@ def test_installation_failure_return_false(qtbot: QtBot, mocker: MockerFixture) 
 
     assert "the following error occured" in widget.label.text()
     assert "The image cannot be found" in widget.traceback.toPlainText()
+
+
+def test_up_to_date_docker_desktop_does_nothing(
+    qtbot: QtBot, mocker: MockerFixture
+) -> None:
+    # Setup install to return False
+    mock_app = mocker.MagicMock()
+    dummy = mocker.MagicMock(spec=Container)
+    dummy.check_docker_desktop_version.return_value = (True, "1.0.0")
+    dz = DangerzoneGui(mock_app, dummy)
+
+    window = MainWindow(dz)
+    qtbot.addWidget(window)
+
+    menu_actions = window.hamburger_button.menu().actions()
+    assert "Docker Desktop should be upgraded" not in [
+        a.toolTip() for a in menu_actions
+    ]
+
+
+def test_outdated_docker_desktop_displays_warning(
+    qtbot: QtBot, mocker: MockerFixture
+) -> None:
+    # Setup install to return False
+    mock_app = mocker.MagicMock()
+    dummy = mocker.MagicMock(spec=Container)
+    dummy.check_docker_desktop_version.return_value = (False, "1.0.0")
+    dz = DangerzoneGui(mock_app, dummy)
+
+    load_svg_spy = mocker.spy(main_window_module, "load_svg_image")
+
+    window = MainWindow(dz)
+    qtbot.addWidget(window)
+
+    menu_actions = window.hamburger_button.menu().actions()
+    assert menu_actions[0].toolTip() == "Docker Desktop should be upgraded"
+
+    # Check that the hamburger icon has changed with the expected SVG image.
+    assert load_svg_spy.call_count == 4
+    assert (
+        load_svg_spy.call_args_list[2].args[0] == "hamburger_menu_update_dot_error.svg"
+    )
+
+    # Clicking the menu item should open a warning message
+    menu_actions[0].trigger()

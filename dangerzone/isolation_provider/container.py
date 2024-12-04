@@ -12,9 +12,9 @@ from ..util import get_resource_path, get_subprocess_startupinfo
 from .base import IsolationProvider, terminate_process_group
 
 TIMEOUT_KILL = 5  # Timeout in seconds until the kill command returns.
-MINIMUM_DOCKER_VERSION = {
-    "Darwin": "4.35.1",
-    "Windows": "4.35.1",
+MINIMUM_DOCKER_DESKTOP = {
+    "Darwin": "4.36.0",
+    "Windows": "4.36.0",
 }
 
 # Define startupinfo for subprocesses
@@ -203,6 +203,7 @@ class Container(IsolationProvider):
     @staticmethod
     def check_docker_desktop_version() -> Tuple[bool, str]:
         # On windows and darwin, check that the minimum version is met
+        version = ""
         if platform.system() != "Linux":
             with subprocess.Popen(
                 ["docker", "version", "--format", "{{.Server.Platform.Name}}"],
@@ -212,12 +213,15 @@ class Container(IsolationProvider):
             ) as p:
                 stdout, stderr = p.communicate()
                 if p.returncode != 0:
-                    raise NotAvailableContainerTechException("docker", stderr.decode())
+                    # In the case where there were an error, consider that
+                    # the check went trough, as we're checking for installation
+                    # compatibiliy somewhere else already
+                    return True, version
                 # The output is like "Docker Desktop 4.35.1 (173168)"
                 version = stdout.decode().replace("Docker Desktop", "").split()[0]
-                if version < MINIMUM_DOCKER_VERSION[platform.system()]:
+                if version < MINIMUM_DOCKER_DESKTOP[platform.system()]:
                     return False, version
-        return True, ""
+        return True, version
 
     @staticmethod
     def is_runtime_available() -> bool:
