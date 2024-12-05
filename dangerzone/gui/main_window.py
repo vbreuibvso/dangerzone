@@ -130,6 +130,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         self.setWindowTitle("Dangerzone")
         self.setWindowIcon(self.dangerzone.get_window_icon())
+        self.alert = None
 
         self.setMinimumWidth(600)
         if platform.system() == "Darwin":
@@ -322,7 +323,7 @@ class MainWindow(QtWidgets.QMainWindow):
             has_cancel=False,
         )
 
-        upgrade_action.triggered.connect(lambda: widget.launch())
+        upgrade_action.triggered.connect(lambda: self.alert.launch())
         hamburger_menu.insertAction(sep, upgrade_action)
 
         self.hamburger_button.setIcon(

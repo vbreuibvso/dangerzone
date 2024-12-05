@@ -616,6 +616,7 @@ def test_outdated_docker_desktop_displays_warning(
     mock_app = mocker.MagicMock()
     dummy = mocker.MagicMock(spec=Container)
     dummy.check_docker_desktop_version.return_value = (False, "1.0.0")
+
     dz = DangerzoneGui(mock_app, dummy)
 
     load_svg_spy = mocker.spy(main_window_module, "load_svg_image")
@@ -632,5 +633,12 @@ def test_outdated_docker_desktop_displays_warning(
         load_svg_spy.call_args_list[2].args[0] == "hamburger_menu_update_dot_error.svg"
     )
 
-    # Clicking the menu item should open a warning message
+    alert_spy = mocker.spy(window.alert, "launch")
+
     menu_actions[0].trigger()
+
+    # Clicking the menu item should open a warning message
+    def _check_alert_displayed():
+        alert_spy.assert_any_call()
+
+    QtCore.QTimer.singleShot(0, _check_alert_displayed)
